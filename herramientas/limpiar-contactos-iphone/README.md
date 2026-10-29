@@ -26,6 +26,7 @@ Script que toma tus contactos exportados desde iCloud (`.vcf`) y:
    | `--conservar-extras` | Conserva apodo, correo, empresa, cargo, cumpleaños, notas, dirección, web y foto (por defecto solo nombre + teléfonos). Las notas automáticas de Outlook y WhatsApp se descartan. |
    | `--estructurar` | Separa del nombre el rango o título, nombres, apellidos, cargo y empresa (`Cmdte PNP Cesar Torres DIRCOTE Delta 4` → *Cmdte* · *Cesar* · *Torres* · PNP/DIRCOTE · *Delta 4*). Además trata como corporativos los números guardados con nombres de personas distintas: el número queda en el contacto que diga "Actual"/"New" (o, si ninguno, en el de nombre más completo) y los otros nombres pasan a sus notas. |
    | `--organizaciones MARSA,ECL` | Siglas o empresas adicionales a reconocer dentro de los nombres. |
+   | `--excluir dircote` | Elimina los contactos cuyo nombre (actual o anterior), empresa o cargo coincide con la expresión regular. Útil para quitar contactos ajenos que se mezclaron en el teléfono. |
    | `--no-unir-por-nombre` | Unifica solo cuando se repite un número, no por nombre idéntico. |
    | `--pais 51` | Código de país para números sin prefijo (por defecto Perú). |
    | `-o salida.vcf` | Nombre del archivo de salida. |

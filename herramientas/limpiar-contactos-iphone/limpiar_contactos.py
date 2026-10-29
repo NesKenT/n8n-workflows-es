@@ -569,6 +569,17 @@ def limpiar(tarjetas, pais, unir_por_nombre, corporativos=False, organizaciones=
     return resultado, sin_tel, absorbidos
 
 
+def excluir_contactos(contactos, patron):
+    """Separa los contactos cuyo nombre (o alguno de sus nombres anteriores), empresa
+    o cargo coincide con la expresión regular `patron`."""
+    regex = re.compile(patron, re.I)
+    conservar, excluidos = [], []
+    for c in contactos:
+        texto = " | ".join(c["originales"] + [c["nombre"], " ".join(c["ORG"]), c["TITLE"]])
+        (excluidos if regex.search(texto) else conservar).append(c)
+    return conservar, excluidos
+
+
 # ---------------------------------------------------------------------------
 # Escritura
 # ---------------------------------------------------------------------------
@@ -651,7 +662,7 @@ def escribir_vcf(contactos, ruta, conservar_extras, estructurar=False, organizac
             f.write("".join(plegar(l) + "\r\n" for l in lineas))
 
 
-def escribir_reporte(contactos, sin_tel, absorbidos, ruta):
+def escribir_reporte(contactos, sin_tel, absorbidos, ruta, excluidos=()):
     with open(ruta, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.writer(f)
         w.writerow(["accion", "nombre_final", "contactos_unificados", "nombres_originales", "telefonos",
@@ -662,6 +673,9 @@ def escribir_reporte(contactos, sin_tel, absorbidos, ruta):
                         " | ".join(c["telefonos"]), " | ".join(c["otros_nombres"])])
         for a in absorbidos:
             w.writerow(["numero_corporativo_reasignado", a["nombre"], a["cantidad"], " | ".join(a["originales"]), "", ""])
+        for c in excluidos:
+            w.writerow(["excluido_por_filtro", c["nombre"], c["cantidad"], " | ".join(c["originales"]),
+                        " | ".join(c["telefonos"]), ""])
         for t in sin_tel:
             w.writerow(["eliminado_sin_telefono", t["nombre"] or "(vacío)", 1, t["nombre"], "", ""])
 
@@ -680,6 +694,9 @@ def main():
                          "compartidos por personas distintas como corporativos")
     ap.add_argument("--organizaciones", default="",
                     help="Siglas o nombres de empresas adicionales, separados por coma (ej. MARSA,ECL)")
+    ap.add_argument("--excluir", metavar="REGEX",
+                    help="Elimina los contactos cuyo nombre, empresa o cargo coincide con la expresión "
+                         "regular (sin distinguir mayúsculas), ej. 'dircote|\\bdelta\\b'")
     args = ap.parse_args()
 
     organizaciones = frozenset(ORGANIZACIONES | {x.strip().upper() for x in args.organizaciones.split(",") if x.strip()})
@@ -692,8 +709,11 @@ def main():
         sys.exit("No se encontraron contactos en " + str(entrada))
     contactos, sin_tel, absorbidos = limpiar(tarjetas, args.pais, not args.no_unir_por_nombre,
                                              args.estructurar, organizaciones)
+    excluidos = []
+    if args.excluir:
+        contactos, excluidos = excluir_contactos(contactos, args.excluir)
     escribir_vcf(contactos, salida, args.conservar_extras, args.estructurar, organizaciones)
-    escribir_reporte(contactos, sin_tel, absorbidos, reporte)
+    escribir_reporte(contactos, sin_tel, absorbidos, reporte, excluidos)
 
     unificados = sum(1 for c in contactos if c["cantidad"] > 1)
     duplicados = sum(c["cantidad"] - 1 for c in contactos)
@@ -703,6 +723,8 @@ def main():
     if args.estructurar:
         print("Números corporativos resueltos:   {} contactos con otros nombres en notas; {} titulares anteriores sin otro número".format(
             sum(1 for c in contactos if c["otros_nombres"]), len(absorbidos)))
+    if args.excluir:
+        print("Excluidos por filtro:             {}".format(len(excluidos)))
     print("Contactos finales:                {}".format(len(contactos)))
     print("Archivo limpio:  {}".format(salida))
     print("Reporte:         {}".format(reporte))
