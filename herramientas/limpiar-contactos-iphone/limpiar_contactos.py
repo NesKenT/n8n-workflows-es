@@ -212,7 +212,8 @@ def limpiar(tarjetas, pais, unir_por_nombre):
             else:
                 vistos_tel[clave] = i
         kn = clave_nombre(t["nombre"])
-        if unir_por_nombre and kn and not kn.replace(" ", "").isdigit():
+        # Un nombre de una sola palabra ("Ana", "Mamá") puede ser de personas distintas.
+        if unir_por_nombre and len(kn.split()) >= 2 and not kn.replace(" ", "").isdigit():
             if kn in vistos_nombre:
                 cj.unir(vistos_nombre[kn], i)
             else:
